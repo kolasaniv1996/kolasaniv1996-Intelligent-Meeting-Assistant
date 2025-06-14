@@ -1,0 +1,103 @@
+# helm/work-buddy-chart/values.yaml
+
+replicaCount: 1
+
+imagePullSecrets: [] # Optional: if images are in a private registry
+# nameOverride: ""
+# fullnameOverride: ""
+
+# --- Global settings ---
+global:
+  # imageRegistry: "your-docker-image-repo" # Global image registry
+  # defaultImageTag: "latest" # Global default tag
+  # environment: "development" # Or "production"
+  redis:
+    host: "redis-master.default.svc.cluster.local" # Default internal Redis host
+    port: "6379"
+    notificationChannel: "system_notifications"
+  neo4j:
+    uri: "bolt://neo4j.default.svc.cluster.local:7687" # Default internal Neo4j URI
+    user: "neo4j"
+    # neo4j.password should be supplied via secrets, not directly in values.yaml for production.
+    # Example: --set global.neo4j.password=secretpassword (for dev) or use Secrets management.
+
+# --- Service-specific configurations ---
+
+authService:
+  enabled: true
+  image:
+    repository: your-docker-image-repo/auth-service # Replace
+    pullPolicy: IfNotPresent
+    tag: "latest" # Or specify a version
+  port: 5000
+  service:
+    type: ClusterIP
+    port: 80 # Exposed service port
+  # Config values (non-sensitive) - can be overridden
+  config:
+    googleClientId: "YOUR_GOOGLE_CLIENT_ID_FROM_CONSOLE_IN_VALUES"
+    googleRedirectUri: "http://<your-external-loadbalancer-or-domain>/auth/google/callback"
+    neo4jUri: "" # Will default to global.neo4j.uri if empty
+    neo4jUser: "" # Will default to global.neo4j.user if empty
+  # For secrets, you'd typically reference existing secrets or use a secret management solution.
+  # Example: existingSecret: "auth-service-secrets-k8s"
+  # And then mount them in the template.
+  # For simplicity, the template will assume secrets are created outside or need specific values.
+  secrets:
+    # These would ideally be populated from a secure source or existing K8s secrets
+    googleClientSecret: "YOUR_GOOGLE_CLIENT_SECRET_IN_VALUES_FOR_DEV_ONLY"
+    flaskSecretKey: "a_very_secure_random_key_for_flask_in_values"
+    neo4jPassword: "YOUR_NEO4J_PASSWORD_IN_VALUES_FOR_DEV_ONLY"
+
+integrationService:
+  enabled: true
+  image:
+    repository: your-docker-image-repo/integration-service # Replace
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  port: 5001
+  service:
+    type: ClusterIP
+    port: 80
+  config:
+    jiraServerUrl: "https://your-domain.atlassian.net"
+    jiraUserEmail: "your-email@example.com"
+    confluenceServerUrl: "https://your-domain.atlassian.net/wiki"
+    confluenceUserEmail: "your-email@example.com"
+  secrets:
+    jiraApiToken: "YOUR_JIRA_API_TOKEN_IN_VALUES_FOR_DEV_ONLY"
+    confluenceApiToken: "YOUR_CONFLUENCE_API_TOKEN_IN_VALUES_FOR_DEV_ONLY"
+
+meetingService:
+  enabled: true
+  image:
+    repository: your-docker-image-repo/meeting-service # Replace
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  port: 5002
+  service:
+    type: ClusterIP
+    port: 80
+  config:
+    integrationServiceUrl: "http://work-buddy-chart-integration-service:80"
+    # Assumes Helm release name is 'work-buddy-chart'
+    redisHost: "" # Defaults to global.redis.host
+    redisPort: "" # Defaults to global.redis.port
+    redisNotificationChannel: "" # Defaults to global.redis.notificationChannel
+
+notificationService:
+  enabled: true
+  image:
+    repository: your-docker-image-repo/notification-service # Replace
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  # No service port for this one by default
+  config:
+    redisHost: "" # Defaults to global.redis.host
+    redisPort: "" # Defaults to global.redis.port
+    redisChannel: "" # Defaults to global.redis.notificationChannel (or define specific)
+
+# Placeholder for ai-processing-service if we were to add it
+# aiProcessingService:
+#   enabled: false
+#   # ...

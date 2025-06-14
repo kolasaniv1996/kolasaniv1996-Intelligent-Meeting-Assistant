@@ -1,0 +1,64 @@
+# kubernetes/meeting-service.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meeting-service
+  labels:
+    app: meeting-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meeting-service
+  template:
+    metadata:
+      labels:
+        app: meeting-service
+    spec:
+      containers:
+      - name: meeting-service
+        image: your-docker-image-repo/meeting-service:latest # Replace with actual image
+        ports:
+        - containerPort: 5002
+        env:
+        - name: FLASK_APP
+          value: "app.py"
+        - name: FLASK_ENV
+          value: "production"
+        - name: INTEGRATION_SERVICE_URL
+          # This should point to the integration-service within the cluster
+          value: "http://integration-service.default.svc.cluster.local:80"
+          # Adjust namespace if services are in different ones
+        - name: REDIS_HOST
+          value: "redis-master.default.svc.cluster.local" # Example if using Redis from Bitnami Helm chart
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_NOTIFICATION_CHANNEL
+          value: "system_notifications"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5002
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5002
+          initialDelaySeconds: 30
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meeting-service
+  labels:
+    app: meeting-service
+spec:
+  type: ClusterIP
+  selector:
+    app: meeting-service
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5002

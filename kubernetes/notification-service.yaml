@@ -1,0 +1,36 @@
+# kubernetes/notification-service.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: your-docker-image-repo/notification-service:latest # Replace with actual image
+        # No ports needed if it's only a Redis consumer script
+        env:
+        - name: PYTHONUNBUFFERED
+          # Ensures print statements are sent directly to container logs
+          value: "1"
+        - name: REDIS_HOST
+          value: "redis-master.default.svc.cluster.local" # Example Redis service name
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_CHANNEL
+          value: "system_notifications"
+        # Add readiness/liveness probes if it exposes an HTTP health check endpoint
+        # For a simple script, a basic liveness probe could be a command that checks
+        # if the process is running, but that's more advanced.
+        # For now, omitting probes for this simple consumer.
+# No Service object needed if it doesn't expose any ports.

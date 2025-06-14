@@ -1,0 +1,106 @@
+# kubernetes/integration-service.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: integration-service
+  labels:
+    app: integration-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: integration-service
+  template:
+    metadata:
+      labels:
+        app: integration-service
+    spec:
+      containers:
+      - name: integration-service
+        image: your-docker-image-repo/integration-service:latest # Replace with actual image
+        ports:
+        - containerPort: 5001
+        env:
+        - name: FLASK_APP
+          value: "app.py"
+        - name: FLASK_ENV
+          value: "production"
+        # Jira and Confluence credentials should be secrets
+        - name: JIRA_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: integration-service-config
+              key: jira_server_url
+        - name: JIRA_USER_EMAIL
+          valueFrom:
+            configMapKeyRef:
+              name: integration-service-config
+              key: jira_user_email
+        - name: JIRA_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: integration-service-secrets
+              key: jira_api_token
+        - name: CONFLUENCE_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: integration-service-config
+              key: confluence_server_url
+        - name: CONFLUENCE_USER_EMAIL
+          valueFrom:
+            configMapKeyRef:
+              name: integration-service-config
+              key: confluence_user_email
+        - name: CONFLUENCE_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: integration-service-secrets
+              key: confluence_api_token
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5001
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5001
+          initialDelaySeconds: 30
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: integration-service
+  labels:
+    app: integration-service
+spec:
+  type: ClusterIP
+  selector:
+    app: integration-service
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5001
+---
+# Example ConfigMap for integration-service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: integration-service-config
+data:
+  jira_server_url: "https://your-domain.atlassian.net"
+  jira_user_email: "your-email@example.com"
+  confluence_server_url: "https://your-domain.atlassian.net/wiki"
+  confluence_user_email: "your-email@example.com"
+# ---
+# Example Secret for integration-service (MANAGE SECURELY!)
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: integration-service-secrets
+# type: Opaque
+# stringData:
+#   jira_api_token: "YOUR_JIRA_API_TOKEN"
+#   confluence_api_token: "YOUR_CONFLUENCE_API_TOKEN"
