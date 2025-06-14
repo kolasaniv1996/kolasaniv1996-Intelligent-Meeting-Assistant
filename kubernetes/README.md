@@ -14,7 +14,22 @@ Basic Kubernetes deployment and service YAML files are provided for each microse
 
 ## General Notes
 
-*   **Docker Images**: You need to build Docker images for each service and push them to a container registry. Update the `image:` fields in the deployment YAMLs with your actual image paths.
+*   **Docker Images**:
+    *   Each service now has a `Dockerfile` in its respective directory (e.g., `services/auth-service/Dockerfile`).
+    *   You need to build Docker images for each service using these Dockerfiles. For example, to build the `auth-service` image:
+        ```bash
+        cd services/auth-service
+        docker build -t your-docker-image-repo/auth-service:latest .
+        # Or use a specific version tag, e.g., your-docker-image-repo/auth-service:0.1.0
+        cd ../.. # Return to project root
+        ```
+        Repeat this for each service (`integration-service`, `meeting-service`, `notification-service`, `ai-processing-service`), replacing `auth-service` with the appropriate service name.
+    *   After building, these images must be pushed to a container registry (e.g., Docker Hub, Google Container Registry, AWS ECR, Azure CR).
+        ```bash
+        docker push your-docker-image-repo/auth-service:latest
+        # (Repeat for other images)
+        ```
+    *   Finally, update the `image:` fields in the Kubernetes deployment YAML files (e.g., `kubernetes/integration-service.yaml`) to point to your actual image paths in the registry. The `auth-service.yaml` was moved to the Helm chart and will get its image path from `values.yaml`.
 *   **Configuration**:
     *   Sensitive data (API keys, secrets, passwords) are referenced via `secretKeyRef`. These Kubernetes Secrets must be created in your cluster *before* deploying the applications. Example secret structures are commented in the YAMLs for guidance but should **not** be committed with real values.
     *   Non-sensitive configuration is referenced via `configMapKeyRef`. Example ConfigMaps are included in the service YAML files but can also be managed separately.
